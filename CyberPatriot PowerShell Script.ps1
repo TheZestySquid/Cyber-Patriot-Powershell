@@ -272,11 +272,118 @@ secedit /configure /db c:\windows\security\local.sdb /cfg c:\secpol.cfg /areas S
 Remove-Item C:\secpol.cfg -Force
 Write-Host "Password Complexity Enforced"
 
-#Acess a C# script to Change GPO values
-$pathToCSFile = 'C:\Users\Default\Desktop\Cyberpatriot\PolFileEditor.cs'
-
-
  
 #Lists and outputs Schedule Tasks
 Get-ScheduledTask | where state -EQ 'ready' | Get-ScheduledTaskInfo | 
 Export-Csv -NoTypeInformation -Path C:\scheduledTasksResults.csv
+
+#Get netstat info
+netstat -ano | Out-File $Dir\netstat.txt
+
+
+
+#Delete users
+Net user
+
+do {
+$Delete = Read-host -Prompt "Should a user be deleted? Y/N"
+    if ($Delete -eq "Y") {
+        $DelUser = Read-host -Prompt "What user?"
+            net user $DelUser /DELETE | out-null }
+    else {break}
+    net user
+    } while ($Delete -eq "Y")
+
+do {
+$Add = Read-host -Prompt "Should a user be added? Y/N"
+    if ($Add -eq "Y") {
+        $AddUser = Read-host -Prompt "Username?"
+            net user $AddUser /Add | out-null }
+    else {break}
+    net user
+    } while ($Add -eq "Y")
+
+
+
+#Set passwords for all accounts
+$Usernames = Get-WmiObject -class win32_useraccount -filter "LocalAccount='True'"
+foreach ($Username in $Usernames) {
+    net user $Username.Name Cyb3rP@tr10t /passwordreq:yes /logonpasswordchg:yes | out-null }
+wmic UserAccount set PasswordExpires=True | out-null
+wmic UserAccount set Lockout=False | out-null
+
+
+#Delete shares
+net share
+
+do {
+$Share = Read-host -Prompt "Should a share be removed? Y/N"
+    if ($Share -eq "Y") {
+        $DelShare = Read-Host -Prompt "Share?"
+            net share $DelShare /delete | out-null }
+    else {break}
+    net share
+    } while ($Share -eq "Y") 
+
+
+#Enable Structured Exception Handling Overwrite Protection
+Set-ItemProperty -path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" -name DisableExceptionChainValidation -value 0 | out-null
+
+#Enable Structured Exception Handling Overwrite Protection
+Set-ItemProperty -path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -name LocalAccountTokenFilterPolicy -value 0 | out-null
+
+#Disable Autoplay
+$TestPath = Test-Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+if($TestPath -match 'False'){
+    New-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies" -Name Explorer | out-null }
+New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -name NoDriveTypeAutoRun -value 0xff -ErrorAction SilentlyContinue | out-null
+Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -name NoDriveTypeAutoRun -value 0xff | out-null
+New-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers" -name DisableAutoplay -value 1 -ErrorAction SilentlyContinue | out-null
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\AutoplayHandlers" -name DisableAutoplay -value 1 | out-null
+
+#Disable offline files
+Set-ItemProperty -path "HKLM:\SYSTEM\CurrentControlSet\Services\CSC" -name Start -value 4 | out-null
+
+#Disable ipv6
+New-ItemProperty -path "HKLM:\SYSTEM\CurrentControlSet\Services\tcpip6\Parameters" -name DisabledComponents -value 0xff | out-null
+
+#Show hidden files and file extensions 
+
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -name Hidden -value 1 | out-null
+Set-ItemProperty -path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -name HideFileExt -value 0 | out-null
+Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -name ShowSuperHidden -value 1 | out-null
+
+Stop-Process -ProcessName Explorer | out-null
+
+
+#Disable optional features
+servermanager
+echo "Remove Features"
+echo "Remove Roles"
+Read-Host -prompt "Press enter to continue"
+
+
+#Turn on audits
+auditpol.exe /set /category:* /success:enable | out-null
+auditpol.exe /set /category:* /failure:enable | out-null
+
+#Require a password on wakeup
+powercfg -SETACVALUEINDEX SCHEME_BALANCED SUB_NONE CONSOLELOCK 1 | out-null
+
+echo "netstat info in netstat.txt"
+Read-Host -Prompt "Press enter to continue"
+
+#Open control panel applets for extra configuration
+echo "A bunch of control panel applets are set to open after this"
+read-host -prompt "Press enter to continue"
+
+control inetcpl.cpl
+control firewall.cpl
+
+echo "Reminders:"
+echo "Check the hosts file"
+
+#Check for updates
+echo "Begin updates"
+control /name Microsoft.WindowsUpdate
+read-host -prompt "Press enter to continue"
