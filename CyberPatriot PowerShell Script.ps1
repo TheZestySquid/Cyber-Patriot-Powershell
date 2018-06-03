@@ -280,6 +280,40 @@ Export-Csv -NoTypeInformation -Path C:\scheduledTasksResults.csv
 #Get netstat info
 netstat -ano | Out-File $Dir\netstat.txt
 
+#Uninstall programs
+control appwiz.cpl
+
+echo "Uninstall programs"
+Read-Host -Prompt "Press enter to continue"
+
+$Processes = @(get-process | select-object name,company,path -uniq |
+        where-object {$_.Path -like 'C:\Program Files\*' -or $_.Path -like 'C:\ProgramData\*' -and $_.Company -notmatch "Google" -and $_.Company -notmatch "Opera" -and $_.Company -notmatch "Mozilla" -and $_.Company -notmatch "VMware"})
+foreach($Process in $Processes){
+    Stop-Process -name $Process.name -force
+}
+
+$ProgramFiles = Get-ChildItem 'C:\Program Files' -exclude *Windows*,*Microsoft* -force | 
+       Where-Object {$_.PSIsContainer} | 
+       Foreach-Object {$_.Name}
+$ProgramFiles86 = Get-ChildItem 'C:\Program Files (x86)' -exclude *Windows*,*Microsoft* -force | 
+       Where-Object {$_.PSIsContainer} | 
+       Foreach-Object {$_.Name}
+$ProgramData = Get-ChildItem 'C:\ProgramData' -exclude *Windows*,*Microsoft* -force | 
+       Where-Object {$_.PSIsContainer} | 
+       Foreach-Object {$_.Name}
+$Programs = $ProgramFiles + $ProgramFiles86 + $ProgramData | Sort-object | Out-File $Dir\ProgramFiles.txt
+Get-Content $Dir\ProgramFiles.txt
+
+do {
+$DeleteProg = Read-Host -Prompt "Should a program be deleted? Y/N"
+    if ($DeleteProg -eq "Y") {
+        $Programs
+        $DelProg = Read-Host -Prompt "What program?"
+            Remove-Item "C:\Program Files\$DelProg" -Recurse -ErrorAction SilentlyContinue | out-null 
+            Remove-Item "C:\Program Files (x86)\$DelProg" -Recurse -ErrorAction SilentlyContinue | out-null 
+            Remove-Item "C:\Program Data\$DelProg" -Recurse -ErrorAction SilentlyContinue | out-null }
+    else {break}
+    } while ($DeleteProg -eq "Y")
 
 
 #Delete users
