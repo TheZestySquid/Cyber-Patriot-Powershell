@@ -342,10 +342,13 @@ $Add = Read-host -Prompt "Should a user be added? Y/N"
 #Set passwords for all accounts
 $Usernames = Get-WmiObject -class win32_useraccount -filter "LocalAccount='True'"
 foreach ($Username in $Usernames) {
-    net user $Username.Name Cyb3rP@tr10t /passwordreq:yes /logonpasswordchg:yes | out-null }
+    net user $Username.Name Communism1! /passwordreq:yes /logonpasswordchg:yes | out-null }
 wmic UserAccount set PasswordExpires=True | out-null
 wmic UserAccount set Lockout=False | out-null
 
+#Disable guest and administrator
+net user administrator /active:no | out-null
+net user guest /active:no | out-null
 
 #Delete shares
 net share
